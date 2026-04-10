@@ -152,13 +152,16 @@ def split(self, text: str) -> list[str]:
 
 | Thành viên | Strategy | Retrieval Score (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
-| Tôi | | | | |
-| [Tên] | | | | |
-| [Tên] | | | | |
+| Tôi | Recursive | 7.5 | Giữ được cấu trúc văn bản (đoạn, câu) thông qua việc tách đệ quy linh hoạt, cân bằng tốt giữa kích thước và ngữ cảnh. | Vẫn dựa trên tách chuỗi vật lý, đôi khi vẫn cắt ngang context nếu các paragraph quá dài hoặc không có dấu phân cách rõ ràng. |
+| Lê Trung Anh Quốc | Semantic | 8.0 | Chia chunk dựa trên sự tương đồng ý nghĩa, giữ trọn vẹn mạch thông tin và ngữ cảnh, hạn chế việc cắt ngang các mô tả quan trọng. | Tốn nhiều tài nguyên tính toán (Embedding API), tốc độ xử lý chậm hơn các phương pháp tách chuỗi thông thường. |
+| Trần Thái Thịnh | Recursive | 7.5 | Giữ được cấu trúc văn bản (đoạn, câu) thông qua việc tách đệ quy linh hoạt, cân bằng tốt giữa kích thước và ngữ cảnh. | Vẫn dựa trên tách chuỗi vật lý, đôi khi vẫn cắt ngang context nếu các paragraph quá dài hoặc không có dấu phân cách rõ ràng. |
+| Nguyễn Đức Cường | Sentence | 6.5 | Đảm bảo tính toàn vẹn của từng câu, giúp mô hình hiểu ngữ cảnh ở mức độ câu tốt hơn so với cắt theo ký tự ngẫu nhiên. | Kích thước chunk không đồng đều (có câu quá dài/quá ngắn), thông tin dễ bị phân mảnh nếu không gộp nhiều câu liên quan. |
+| Trần Khánh Bằng | Layered | 8.5 | Truy xuất thông tin đa tầng (kết hợp chunk lớn bao quát và chunk nhỏ chi tiết), giúp Agent nắm bắt cả tổng quan lẫn chi tiết cụ thể. | Cấu trúc index phức tạp, tốn bộ nhớ lưu trữ và đòi hỏi logic truy vấn nâng cao để xử lý các tầng dữ liệu. |
+| Đỗ Hải Nam | Semantic | 8.0 | Chia chunk dựa trên sự tương đồng ý nghĩa, giữ trọn vẹn mạch thông tin và ngữ cảnh, hạn chế việc cắt ngang các mô tả quan trọng. | Tốn nhiều tài nguyên tính toán (Embedding API), tốc độ xử lý chậm hơn các phương pháp tách chuỗi thông thường. |
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
 > *Viết 2-3 câu:*
-
+Chiến lược Layered Chunking (kết hợp với Semantic) là lựa chọn tối ưu nhất cho domain hỗn hợp này. Do dữ liệu trải dài từ văn bản pháp luật chi tiết (EU AI Act) đến các bài blog và wiki, cấu trúc đa tầng giúp hệ thống vừa có thể truy xuất nhanh các sự kiện cụ thể (chunk nhỏ), vừa không làm mất đi bức tranh toàn cảnh và mạch lập luận của tài liệu (chunk lớn). Điều này khắc phục được sự phân mảnh thông tin mà các phương pháp Fixed hay Sentence thường gặp phải, đồng thời tối ưu hóa độ chính xác cho câu trả lời của Agent.
 ---
 
 ## 4. My Approach — Cá nhân (10 điểm)
