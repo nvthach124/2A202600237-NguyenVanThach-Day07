@@ -1,8 +1,8 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
-**Ngày:** [Ngày nộp]
+**Họ tên:** Nguyễn Văn Thạch - 2A202600237
+**Nhóm:** 10
+**Ngày:** 10/4/2026
 
 ---
 
@@ -11,30 +11,45 @@
 ### Cosine Similarity (Ex 1.1)
 
 **High cosine similarity nghĩa là gì?**
-> *Viết 1-2 câu:*
+
+High cosine similarity nghĩa là hai vector có hướng gần giống nhau, tức là hai câu có ý nghĩa tương tự nhau.
+Công thức: 
+$$cos(\theta) = \frac{A \cdot B}{\|A\| \|B\|}$$
+
+Nếu cos(theta) = 1 thì hai vector có hướng giống nhau, tức là hai câu có ý nghĩa tương tự nhau.
+
 
 **Ví dụ HIGH similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao tương đồng:
+- Sentence A: "Tôi thích con mèo"
+- Sentence B: "Tôi thích con chó"
+- Tại sao tương đồng: Cả hai câu đều nói về việc thích động vật, và "mèo" và "chó" là hai loại động vật có nhiều đặc điểm tương đồng.
 
 **Ví dụ LOW similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao khác:
+- Sentence A: "Tôi thích con mèo"
+- Sentence B: "Tôi không thích con mèo"
+- Tại sao khác: Cả hai câu đều nói về việc thích con mèo, nhưng một câu nói thích và một câu nói không thích, nên hai câu có ý nghĩa khác nhau.
 
 **Tại sao cosine similarity được ưu tiên hơn Euclidean distance cho text embeddings?**
-> *Viết 1-2 câu:*
+
+Cosine similarity được ưu tiên vì nó đo góc giữa các vector, nên phản ánh tốt mức độ giống nhau về ngữ nghĩa mà không bị ảnh hưởng bởi độ dài vector. Trong khi đó, Euclidean distance phụ thuộc vào độ lớn vector, nên kém ổn định hơn khi so sánh text embeddings. 
+
+
 
 ### Chunking Math (Ex 1.2)
 
 **Document 10,000 ký tự, chunk_size=500, overlap=50. Bao nhiêu chunks?**
-> *Trình bày phép tính:*
-> *Đáp án:*
+
+
+1. Tính bước nhảy (stride):
+- Mỗi chunk sẽ bắt đầu với: `stride =chunk_size - overlap = 500 - 50 = 450`
+2. Áp dụng vào công thức 
+`chunks =  (số kí tự - overlap)/ stride = (10000 - 50) / 450 = 22.11`
+
+Kết luận: Làm tròn lên ta có tất cả **23 chunks**.
 
 **Nếu overlap tăng lên 100, chunk count thay đổi thế nào? Tại sao muốn overlap nhiều hơn?**
-> *Viết 1-2 câu:*
 
+Áp dụng công thức trên với overlap = 100 thì chunk count sẽ tăng lên thành 25 chunks,overlap nhiều hơn sẽ giúp tăng khả năng tìm thấy thông tin liên quan hoặc cũng có thể gây thừa thông tin dẫn đến tốn nhiều tài nguyên và thời gian xử lý.
 ---
 
 ## 2. Document Selection — Nhóm (10 điểm)

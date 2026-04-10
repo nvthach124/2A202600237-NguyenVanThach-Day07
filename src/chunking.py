@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-
+import numpy as np
 
 class FixedSizeChunker:
     """
@@ -50,6 +50,19 @@ class SentenceChunker:
         # TODO: split into sentences, group into chunks
         raise NotImplementedError("Implement SentenceChunker.chunk")
 
+        if not text.strip():
+            return []
+        
+        sentences = re.split(r"[.!?]\s+", text.strip())
+        chunks = []
+        for i in range(0, len(sentences), self.max_sentences_per_chunk):
+            chunk = " ".join(sentences[i:i+ self.max_sentences_per_chunk]).strip()
+            if chunk:
+                chunks.append(chunk)
+
+        return chunks
+        
+
 
 class RecursiveChunker:
     """
@@ -66,12 +79,50 @@ class RecursiveChunker:
         self.chunk_size = chunk_size
 
     def chunk(self, text: str) -> list[str]:
-        # TODO: implement recursive splitting strategy
-        raise NotImplementedError("Implement RecursiveChunker.chunk")
+        return [c.strip() for c in self._split(text, self.separators) if c.strip()]
 
     def _split(self, current_text: str, remaining_separators: list[str]) -> list[str]:
-        # TODO: recursive helper used by RecursiveChunker.chunk
-        raise NotImplementedError("Implement RecursiveChunker._split")
+        # Nếu đủ nhỏ → giữ nguyên
+        if len(current_text) <= self.chunk_size:
+            return [current_text]
+
+        # Nếu hết separator → cắt cứng
+        if not remaining_separators:
+            return [
+                current_text[i:i + self.chunk_size]
+                for i in range(0, len(current_text), self.chunk_size)
+            ]
+
+        separator = remaining_separators[0]
+
+        # Trường hợp separator = "" → fallback cắt từng ký tự
+        if separator == "":
+            return [
+                current_text[i:i + self.chunk_size]
+                for i in range(0, len(current_text), self.chunk_size)
+            ]
+
+        # Tách theo separator hiện tại
+        splits = current_text.split(separator)
+
+        chunks = []
+        current_chunk = ""
+
+        for part in splits:
+            # thêm lại separator (trừ phần đầu)
+            piece = part if current_chunk == "" else separator + part
+
+            if len(current_chunk) + len(piece) <= self.chunk_size:
+                current_chunk += piece
+            else:
+                if current_chunk:
+                    chunks.extend(self._split(current_chunk, remaining_separators[1:]))
+                current_chunk = part
+
+        if current_chunk:
+            chunks.extend(self._split(current_chunk, remaining_separators[1:]))
+
+        return chunks
 
 
 def _dot(a: list[float], b: list[float]) -> float:
@@ -88,6 +139,14 @@ def compute_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     """
     # TODO: implement cosine similarity formula
     raise NotImplementedError("Implement compute_similarity")
+
+    norm_a = math.sqrt(sum(a*a for a in vec_a))
+    norm_b = math.sqrt(sum(b*b for b in vec_b))
+    
+    if norm_a == 0.0 or norm ==0.0:
+        return 0.0
+    
+    return _dot(vec_a,vec_b) / (norm_a * norm_b)
 
 
 class ChunkingStrategyComparator:
