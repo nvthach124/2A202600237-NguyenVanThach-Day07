@@ -47,13 +47,10 @@ class SentenceChunker:
         self.max_sentences_per_chunk = max(1, max_sentences_per_chunk)
 
     def chunk(self, text: str) -> list[str]:
-        # TODO: split into sentences, group into chunks
-        raise NotImplementedError("Implement SentenceChunker.chunk")
-
         if not text.strip():
             return []
         
-        sentences = re.split(r"[.!?]\s+", text.strip())
+        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
         chunks = []
         for i in range(0, len(sentences), self.max_sentences_per_chunk):
             chunk = " ".join(sentences[i:i+ self.max_sentences_per_chunk]).strip()
@@ -137,21 +134,34 @@ def compute_similarity(vec_a: list[float], vec_b: list[float]) -> float:
 
     Returns 0.0 if either vector has zero magnitude.
     """
-    # TODO: implement cosine similarity formula
-    raise NotImplementedError("Implement compute_similarity")
-
-    norm_a = math.sqrt(sum(a*a for a in vec_a))
-    norm_b = math.sqrt(sum(b*b for b in vec_b))
+    norm_a = math.sqrt(sum(x*x for x in vec_a))
+    norm_b = math.sqrt(sum(x*x for x in vec_b))
     
-    if norm_a == 0.0 or norm ==0.0:
+    if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
     
-    return _dot(vec_a,vec_b) / (norm_a * norm_b)
+    return _dot(vec_a, vec_b) / (norm_a * norm_b)
 
 
 class ChunkingStrategyComparator:
     """Run all built-in chunking strategies and compare their results."""
 
     def compare(self, text: str, chunk_size: int = 200) -> dict:
-        # TODO: call each chunker, compute stats, return comparison dict
-        raise NotImplementedError("Implement ChunkingStrategyComparator.compare")
+        strategies = {
+            "fixed_size": FixedSizeChunker(chunk_size=chunk_size),
+            "by_sentences": SentenceChunker(max_sentences_per_chunk=3),
+            "recursive": RecursiveChunker(chunk_size=chunk_size),
+        }
+
+        results = {}
+        for name, chunker in strategies.items():
+            chunks = chunker.chunk(text)
+            count = len(chunks)
+            avg_length = sum(len(c) for c in chunks) / count if count > 0 else 0
+            results[name] = {
+                "count": count,
+                "avg_length": avg_length,
+                "chunks": chunks,
+            }
+
+        return results

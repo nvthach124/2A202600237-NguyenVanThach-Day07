@@ -18,14 +18,13 @@ from src.embeddings import (
 from src.models import Document
 from src.store import EmbeddingStore
 
-SAMPLE_FILES = [
-    "data/python_intro.txt",
-    "data/vector_store_notes.md",
-    "data/rag_system_design.md",
-    "data/customer_support_playbook.txt",
-    "data/chunking_experiment_report.md",
-    "data/vi_retrieval_notes.md",
-]
+# Automatically find all .txt and .md files in the data directory
+data_path = Path("data/group_data")
+if data_path.exists():
+    SAMPLE_FILES = [str(p) for p in data_path.glob("*") if p.suffix.lower() in {".txt", ".md"}]
+    SAMPLE_FILES.sort()
+else:
+    SAMPLE_FILES = []
 
 
 def load_documents_from_files(file_paths: list[str]) -> list[Document]:
@@ -37,11 +36,9 @@ def load_documents_from_files(file_paths: list[str]) -> list[Document]:
         path = Path(raw_path)
 
         if path.suffix.lower() not in allowed_extensions:
-            print(f"Skipping unsupported file type: {path} (allowed: .md, .txt)")
             continue
 
         if not path.exists() or not path.is_file():
-            print(f"Skipping missing file: {path}")
             continue
 
         content = path.read_text(encoding="utf-8")
@@ -49,7 +46,10 @@ def load_documents_from_files(file_paths: list[str]) -> list[Document]:
             Document(
                 id=path.stem,
                 content=content,
-                metadata={"source": str(path), "extension": path.suffix.lower()},
+                metadata={
+                    "source": str(path), 
+                    "category": path.stem.split("_")[1].capitalize() if "_" in path.stem else "General"
+                },
             )
         )
 
@@ -62,28 +62,40 @@ def demo_llm(prompt: str) -> str:
     return f"[DEMO LLM] Generated answer from prompt preview: {preview}..."
 
 
+from openai import OpenAI
+
+# Load system prompt from file
+SYSTEM_PROMPT_PATH = Path("system_prompt.txt")
+SYSTEM_PROMT = SYSTEM_PROMPT_PATH.read_text(encoding="utf-8") if SYSTEM_PROMPT_PATH.exists() else "You are a helpful assistant."
+
+def openai_llm(prompt: str) -> str:
+    client = OpenAI() # Automatically reads OPENAI_API_KEY from .env
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error calling OpenAI API: {e}"
+
+
 def run_manual_demo(question: str | None = None, sample_files: list[str] | None = None) -> int:
     files = sample_files or SAMPLE_FILES
-    query = question or "Summarize the key information from the loaded files."
+    load_dotenv(override=False)
 
-    print("=== Manual File Test ===")
-    print("Accepted file types: .md, .txt")
-    print("Input file list:")
-    for file_path in files:
-        print(f"  - {file_path}")
-
-    docs = load_documents_from_files(files)
-    if not docs:
-        print("\nNo valid input files were loaded.")
-        print("Create files matching the sample paths above, then rerun:")
-        print("  python3 main.py")
+    print("=== Knowledge Base Loading ===")
+    raw_docs = load_documents_from_files(files)
+    if not raw_docs:
+        print("\nNo valid input files were found in 'data/' folder.")
         return 1
 
-    print(f"\nLoaded {len(docs)} documents")
-    for doc in docs:
-        print(f"  - {doc.id}: {doc.metadata['source']}")
+    print(f"Loaded {len(raw_docs)} documents.")
 
-    load_dotenv(override=False)
     provider = os.getenv(EMBEDDING_PROVIDER_ENV, "mock").strip().lower()
     if provider == "local":
         try:
@@ -98,24 +110,46 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     else:
         embedder = _mock_embed
 
-    print(f"\nEmbedding backend: {getattr(embedder, '_backend_name', embedder.__class__.__name__)}")
+    print(f"Embedding backend: {getattr(embedder, '_backend_name', embedder.__class__.__name__)}")
 
     store = EmbeddingStore(collection_name="manual_test_store", embedding_fn=embedder)
-    store.add_documents(docs)
+    agent = KnowledgeBaseAgent(store=store, llm_fn=openai_llm)
 
-    print(f"\nStored {store.get_collection_size()} documents in EmbeddingStore")
-    print("\n=== EmbeddingStore Search Test ===")
-    print(f"Query: {query}")
-    search_results = store.search(query, top_k=3)
-    for index, result in enumerate(search_results, start=1):
-        print(f"{index}. score={result['score']:.3f} source={result['metadata'].get('source')}")
-        print(f"   content preview: {result['content'][:120].replace(chr(10), ' ')}...")
+    from src.chunking import RecursiveChunker
+    chunker = RecursiveChunker(chunk_size=500)
+    
+    print("Chunking and indexing documents...")
+    agent.ingest_docs(raw_docs, chunker=chunker)
+    print(f"Stored {store.get_collection_size()} chunks in EmbeddingStore.")
 
-    print("\n=== KnowledgeBaseAgent Test ===")
-    agent = KnowledgeBaseAgent(store=store, llm_fn=demo_llm)
-    print(f"Question: {query}")
-    print("Agent answer:")
-    print(agent.answer(query, top_k=3))
+    # Initial query if provided via command line
+    if question:
+        print(f"\nSearching for: {question}")
+        print(f"Answer:\n{agent.answer(question, top_k=3)}")
+        return 0
+
+    # Interactive loop
+    print("\n" + "="*40)
+    print("WELCOME TO PERSONAL RAG CHAT")
+    print("Type 'exit' or 'quit' to end the session.")
+    print("="*40)
+
+    while True:
+        try:
+            query = input("\n[You]: ").strip()
+            if query.lower() in ["exit", "quit"]:
+                print("Goodbye!")
+                break
+            if not query:
+                continue
+            
+            print("[Agent]: Typing...", end="\r")
+            answer = agent.answer(query, top_k=3)
+            print(f"[Agent]: {answer}")
+        except KeyboardInterrupt:
+            print("\nGoodbye!")
+            break
+
     return 0
 
 
@@ -126,3 +160,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

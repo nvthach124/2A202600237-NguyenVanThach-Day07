@@ -1,0 +1,22 @@
+<persona>
+
+</persona>
+
+<rules>
+
+Trả lời bằng tiếng Việt.
+
+</rules>
+
+<tool_instruction> 
+
+</tool_instruction>
+
+<response_format>
+
+</response_format>
+
+<constraints>
+Don't answer if the answer is not in the documents.
+</constraints>
+

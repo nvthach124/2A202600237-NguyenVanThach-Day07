@@ -54,7 +54,10 @@ class OpenAIEmbedder:
         self.client = OpenAI()
 
     def __call__(self, text: str) -> list[float]:
-        response = self.client.embeddings.create(model=self.model_name, input=text)
+        response = self.client.embeddings.create(
+            model=self.model_name,
+            input=text
+            )
         return [float(value) for value in response.data[0].embedding]
 
 
